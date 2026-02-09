@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - NoteGenie</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#4F46E5', secondary: '#10B981', dark: '#1F2937', light: '#F3F4F6' }
+                }
+            }
+        }
+    </script>
+    <style>
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 100; }
+        .toast {
+            background: white; padding: 1rem 1.5rem; border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-top: 10px; display: flex; align-items: center;
+            border-left: 4px solid #4F46E5; animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .page-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 300ms, transform 300ms; }
+        .tab-btn.active { border-bottom-color: #4F46E5; color: #4F46E5; background-color: #EEF2FF; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <div id="auth-loader" class="fixed inset-0 bg-white z-[999] flex items-center justify-center">
+        <div class="text-center">
+            <i class="fa-solid fa-feather-pointed text-primary text-5xl mb-4 animate-bounce"></i>
+            <p class="text-gray-500 font-medium">Verifying Session...</p>
+        </div>
+    </div>
+
+    <div id="login-screen" class="fixed inset-0 bg-white z-[1000] flex flex-col items-center justify-center hidden">
+        <div class="text-center p-8">
+            <div class="bg-indigo-50 p-6 rounded-full inline-block mb-4"><i class="fa-solid fa-user-lock text-primary text-4xl"></i></div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
+            <p class="text-gray-500 mb-8 max-w-xs mx-auto">You need to be logged in to view your dashboard.</p>
+            <a href="login.html" class="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg inline-flex items-center gap-2">
+                <i class="fa-solid fa-right-to-bracket"></i> Login Now
+            </a>
+        </div>
+    </div>
+
+    <nav class="bg-white shadow-md fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center cursor-pointer" onclick="window.router('dashboard')">
+                    <i class="fa-solid fa-feather-pointed text-primary text-2xl mr-2"></i>
+                    <span class="font-bold text-xl tracking-tight text-gray-900">NoteGenie</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <button onclick="window.router('dashboard')" class="nav-link text-gray-600 hover:text-primary font-medium">Dashboard</button>
+                    <button onclick="window.router('services')" class="nav-link text-gray-600 hover:text-primary font-medium">Services</button>
+                    <button onclick="window.router('contact')" class="nav-link text-gray-600 hover:text-primary font-medium">Contact</button>
+                    <button onclick="window.router('about')" class="nav-link text-gray-600 hover:text-primary font-medium">About</button>
+                    <button onclick="window.router('profile')" class="flex items-center space-x-2 bg-primary/10 text-primary px-4 py-2 rounded-full hover:bg-primary/20 transition">
+                        <i class="fa-regular fa-user"></i>
+                        <span>Profile</span>
+                    </button>
+                    <button onclick="window.handleLogout()" class="text-gray-500 hover:text-red-500 transition" title="Logout">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+                <div class="md:hidden flex items-center">
+                    <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="text-gray-600 text-2xl"><i class="fa-solid fa-bars"></i></button>
+                </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 pb-4">
+            <button onclick="window.router('dashboard')" class="block w-full text-left px-4 py-3 text-gray-600 hover:bg-gray-50">Dashboard</button>
+            <button onclick="window.router('services')" class="block w-full text-left px-4 py-3 text-gray-600 hover:bg-gray-50">Services</button>
+            <button onclick="window.router('contact')" class="block w-full text-left px-4 py-3 text-gray-600 hover:bg-gray-50">Contact</button>
+            <button onclick="window.handleLogout()" class="block w-full text-left px-4 py-3 text-red-500 hover:bg-red-50">Logout</button>
+        </div>
+    </nav>
+
+    <main class="flex-grow pt-20 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+
+        <!-- DASHBOARD -->
+        <section id="dashboard" class="page-section active">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+                    <p class="text-gray-500 mt-1" id="welcome-msg">Loading user data...</p>
+                </div>
+                <button onclick="window.router('create-request')" id="create-request-btn" class="bg-primary text-white px-6 py-3 rounded-lg shadow-lg hover:bg-indigo-700 transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Post New Request
+                </button>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4"><i class="fa-solid fa-clock text-xl"></i></div>
+                    <div>
+                        <p class="text-sm text-gray-500">Active Tasks</p>
+                        <p class="text-2xl font-bold text-gray-900" id="stat-active">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4"><i class="fa-solid fa-check-circle text-xl"></i></div>
+                    <div>
+                        <p class="text-sm text-gray-500">Completed</p>
+                        <p class="text-2xl font-bold text-gray-900" id="stat-completed">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                    <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4"><i class="fa-solid fa-wallet text-xl"></i></div>
+                    <div>
+                        <p class="text-sm text-gray-500">Total Spent</p>
+                        <p class="text-2xl font-bold text-gray-900" id="stat-spent">₹0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                    <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4"><i class="fa-solid fa-hand-holding-dollar text-xl"></i></div>
+                    <div>
+                        <p class="text-sm text-gray-500">Total Earned</p>
+                        <p class="text-2xl font-bold text-gray-900" id="stat-earned">₹0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px]">
+                <div class="border-b border-gray-200 flex text-sm font-medium text-center bg-gray-50">
+                    <button onclick="window.switchDashboardTab('requests')" id="tab-btn-requests" class="tab-btn active flex-1 p-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition">
+                        <i class="fa-solid fa-list-ul mr-2"></i> My Requests
+                    </button>
+                    <button onclick="window.switchDashboardTab('jobs')" id="tab-btn-jobs" class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition">
+                        <i class="fa-solid fa-briefcase mr-2"></i> Available Jobs (Earn Money)
+                    </button>
+                </div>
+                <div id="dashboard-list" class="divide-y divide-gray-100">
+                    <div class="p-8 text-center text-gray-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p>Loading data...</p></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTACT PAGE -->
+        <section id="contact" class="page-section">
+            <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900">Contact Admin</h2>
+                    <p class="text-gray-500 text-sm mt-1">Send us your queries or report issues.</p>
+                    <div class="mt-3 inline-flex items-center bg-indigo-50 text-primary px-4 py-2 rounded-full text-sm">
+                        <i class="fa-solid fa-envelope mr-2"></i>
+                        <span>Direct Mail: <a href="mailto:support@notegenie.app" class="font-semibold hover:underline">support@notegenie.app</a></span>
+                    </div>
+                </div>
+                <form onsubmit="event.preventDefault(); window.submitContactQuery(this);">
+                    <div class="grid grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                            <input type="text" id="contact-name" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Roll Number</label>
+                            <input type="text" id="contact-roll" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed" readonly>
+                        </div>
+                    </div>
+                    <!-- Editable Email Field -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Your Email (Required)</label>
+                        <input type="email" id="contact-email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" required placeholder="Enter your email to receive reply">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                        <select id="contact-subject" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none">
+                            <option>Payment Issue</option>
+                            <option>Technical Bug</option>
+                            <option>General Inquiry</option>
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                        <textarea id="contact-msg" rows="4" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" required></textarea>
+                    </div>
+                    <button type="submit" class="bg-primary text-white px-8 py-3 rounded-lg shadow hover:bg-indigo-700 transition w-full">Send Message</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- SERVICES -->
+        <section id="services" class="page-section">
+            <div class="text-center mb-12"><h1 class="text-3xl font-bold text-gray-900 mb-4">Our Writing Services</h1><p class="text-gray-600 max-w-2xl mx-auto">Choose the type of writing assistance you need.</p></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8"><div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 text-2xl mb-6"><i class="fa-solid fa-book-open"></i></div><h3 class="text-xl font-bold text-gray-900 mb-2">Class Notes</h3><p class="text-gray-500 mb-6 text-sm">Missed lectures? Get complete notes copied from a friend.</p><button onclick="window.router('create-request')" class="w-full py-3 rounded-lg border border-blue-600 text-blue-600 font-medium hover:bg-blue-50 transition">Select</button></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8"><div class="w-14 h-14 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 text-2xl mb-6"><i class="fa-solid fa-pen-nib"></i></div><h3 class="text-xl font-bold text-gray-900 mb-2">Assignments</h3><p class="text-gray-500 mb-6 text-sm">Handwritten assignments on A4 sheets or notebooks.</p><button onclick="window.router('create-request')" class="w-full py-3 rounded-lg border border-purple-600 text-purple-600 font-medium hover:bg-purple-50 transition">Select</button></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8"><div class="w-14 h-14 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 text-2xl mb-6"><i class="fa-solid fa-flask"></i></div><h3 class="text-xl font-bold text-gray-900 mb-2">Lab Records</h3><p class="text-gray-500 mb-6 text-sm">Detailed lab observations and record work.</p><button onclick="window.router('create-request')" class="w-full py-3 rounded-lg border border-emerald-600 text-emerald-600 font-medium hover:bg-emerald-50 transition">Select</button></div>
+            </div>
+        </section>
+
+        <!-- CREATE REQUEST -->
+        <section id="create-request" class="page-section">
+            <div class="max-w-4xl mx-auto">
+                <div class="mb-6"><button onclick="window.router('dashboard')" class="text-gray-500 hover:text-primary mb-4 flex items-center"><i class="fa-solid fa-arrow-left mr-2"></i> Back to Dashboard</button><h1 class="text-3xl font-bold text-gray-900">Request New Work</h1></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="md:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <form onsubmit="event.preventDefault(); window.submitRequest(this);">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Type</label><select id="req-type" onchange="window.calculatePrice()" class="w-full p-2.5 bg-gray-50 border rounded-lg"><option value="Notes">Notes (₹20/pg)</option><option value="Assignment">Assignment (₹25/pg)</option><option value="Record">Record (₹30/pg)</option><option value="Workbook">Workbook (₹35/pg)</option></select></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Subject</label><input type="text" id="req-title" class="w-full p-2.5 bg-gray-50 border rounded-lg"></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Pages</label><input type="number" id="req-pages" min="1" value="1" oninput="window.calculatePrice()" class="w-full p-2.5 bg-gray-50 border rounded-lg"></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Deadline</label><input type="date" id="req-date" onchange="window.calculatePrice()" class="w-full p-2.5 bg-gray-50 border rounded-lg"></div>
+                            </div>
+                            <div class="mb-6"><label class="block text-sm font-medium text-gray-700 mb-2">Instructions</label><textarea id="req-instructions" rows="3" class="w-full p-2.5 bg-gray-50 border rounded-lg"></textarea></div>
+                            <div class="mb-6"><label class="block text-sm font-medium text-gray-700 mb-2">Reference Files</label><label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100" id="upload-container"><div class="flex flex-col items-center justify-center pt-5 pb-6"><i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-2" id="upload-icon"></i><p class="text-sm text-gray-500" id="upload-status-text">Click to upload reference material</p></div><input id="dropzone-file" type="file" class="hidden" onchange="window.uploadFile(event)" accept="image/*,application/pdf" /></label></div>
+                        </form>
+                    </div>
+                    <div class="md:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Summary</h3>
+                        <div class="space-y-3 mb-6 border-b border-gray-100 pb-6"><div class="flex justify-between text-sm"><span class="text-gray-500">Service</span><span class="font-medium" id="summary-base">₹0</span></div><div class="flex justify-between text-sm"><span class="text-gray-500">Urgency</span><span class="font-medium text-red-500" id="summary-urgency">+₹0</span></div><div class="flex justify-between text-lg font-bold pt-2"><span>Total</span><span class="text-primary" id="summary-total">₹0</span></div></div>
+                        <div id="payment-step-1"><button onclick="window.showPayment()" class="w-full bg-primary text-white py-3 rounded-lg font-semibold shadow-lg">Proceed to Pay</button></div>
+                        <div id="payment-step-2" class="hidden"><div class="text-center mb-4 p-4 bg-gray-50 border rounded-lg"><i class="fa-solid fa-qrcode text-6xl text-gray-800"></i><p class="font-mono font-bold text-sm mt-1">studentconnect@upi</p></div><input type="text" id="req-utr" placeholder="12 Digit UTR" class="w-full px-3 py-2 border rounded-md mb-3"><button onclick="window.submitRequest()" class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold shadow-lg">Confirm</button><button onclick="window.hidePayment()" class="w-full text-gray-500 text-sm mt-2">Cancel</button></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PROFILE -->
+        <section id="profile" class="page-section">
+            <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-primary px-8 py-10 text-white flex items-center gap-6">
+                    <!-- Profile Image with ID Card Source -->
+                    <img src="https://ui-avatars.com/api/?name=User&background=random" id="profile-img" alt="Profile" class="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-gray-200 object-cover">
+                    <div>
+                        <h2 class="text-2xl font-bold" id="profile-name">User</h2>
+                        <div class="flex items-center gap-2 mt-1">
+                            <p class="text-indigo-200 font-mono" id="profile-roll">...</p>
+                            <!-- College Badge -->
+                            <span class="bg-indigo-700/50 px-2 py-0.5 rounded text-xs text-indigo-100 border border-indigo-500/30" id="profile-college">College</span>
+                        </div>
+                        <span class="inline-block mt-2 bg-white/20 px-3 py-1 rounded-full text-xs font-medium" id="profile-role-badge">Student</span>
+                    </div>
+                </div>
+                <div class="p-8">
+                    <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start"><i class="fa-solid fa-circle-info text-blue-500 mt-1 mr-3"></i><div><h4 class="font-semibold text-blue-800 text-sm">Privacy Note</h4><p class="text-xs text-blue-700">These details are private. Writers only see your task.</p></div></div>
+                    <form onsubmit="event.preventDefault(); window.saveProfile(this.querySelector('button'));">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                                <!-- Name Input Disabled -->
+                                <input type="text" id="input-name" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed" disabled>
+                            </div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Phone</label><input type="tel" id="input-phone" class="w-full px-4 py-2 border rounded-lg"></div>
+                        </div>
+                        <div class="flex justify-end"><button type="submit" class="bg-primary text-white px-8 py-3 rounded-lg shadow hover:bg-indigo-700 transition">Save Changes</button></div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ABOUT -->
+        <section id="about" class="page-section">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-10 text-center"><h2 class="text-3xl font-bold text-gray-900 mb-4">About NoteGenie</h2><p class="text-gray-600 max-w-2xl mx-auto">Bridging the gap between students who need help and those who want to earn. Secure, private, and efficient.</p></div>
+        </section>
+
+    </main>
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 transform transition-all scale-100 p-0 overflow-hidden" id="modal-content">
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center"><h3 class="text-xl font-bold text-gray-900" id="modal-title">Request Details</h3><button onclick="window.closeModal()" class="text-gray-400"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between"><p class="font-medium text-gray-900"><span id="modal-type">Assignment</span> • <span id="modal-pages">10 Pgs</span></p><p class="text-2xl font-bold text-primary" id="modal-price">₹0</p></div>
+                <div class="bg-gray-50 rounded-lg p-4 border grid grid-cols-2 gap-4 text-sm"><div><span id="modal-status" class="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-700">Pending</span></div><div><p class="font-medium text-gray-900" id="modal-date">2026-02-15</p></div></div>
+                <div><p class="text-sm text-gray-500 mb-2">Instructions</p><p class="text-sm text-gray-700 bg-white border p-3 rounded-lg" id="modal-desc">...</p></div>
+                <div id="modal-attachment-section" class="hidden"><a href="#" target="_blank" id="modal-attachment-link" class="flex items-center p-3 rounded-lg border bg-gray-50 text-primary"><i class="fa-solid fa-paperclip mr-2"></i><span class="text-sm font-medium underline">View Reference</span></a></div>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
+                <button onclick="window.closeModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg text-sm transition">Close</button>
+                <button id="modal-action-btn" class="px-4 py-2 bg-primary text-white rounded-lg text-sm hidden">Download Final PDF</button>
+                <button id="writer-accept-btn" onclick="window.acceptTask(this)" class="hidden px-4 py-2 bg-secondary text-white rounded-lg text-sm">Accept Job</button>
+                <button id="writer-complete-btn" onclick="window.completeTask(this)" class="hidden px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Mark Completed</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyBstwDEIau7YHLbgFhkLbod9OMkPw3Xgf4", authDomain: "iare-2204f.firebaseapp.com", projectId: "iare-2204f", storageBucket: "iare-2204f.firebasestorage.app", messagingSenderId: "962120096501", appId: "1:962120096501:web:2eec0d190a65ca499683bc" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const appId = 'iare-2204f';
+
+        let uploadedFileUrl = "";
+        let currentModalId = null;
+        let allRequests = [];
+        let currentUserId = null;
+        let currentDashboardTab = 'requests';
+
+        // Loading Helper
+        window.setBtnLoading = (btn, isLoading, text) => {
+            if(!btn) return;
+            if(isLoading) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Processing...`;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = text;
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUserId = user.uid;
+                try {
+                    const docSnap = await getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'));
+                    if (docSnap.exists() && docSnap.data().approved) {
+                        document.getElementById('auth-loader').classList.add('hidden');
+                        document.getElementById('login-screen').classList.add('hidden');
+                        loadUserProfile(user.uid);
+                        setupRealtimeListeners();
+                    } else { await signOut(auth); showLoginScreen(); }
+                } catch(e) { showLoginScreen(); }
+            } else { showLoginScreen(); }
+        });
+
+        function showLoginScreen() { document.getElementById('auth-loader').classList.add('hidden'); document.getElementById('login-screen').classList.remove('hidden'); }
+
+        async function loadUserProfile(uid) {
+            const docSnap = await getDoc(doc(db, 'artifacts', appId, 'users', uid, 'profile', 'info'));
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('welcome-msg').innerText = `Welcome, ${data.name || 'Student'}!`;
+                document.getElementById('profile-name').innerText = data.name || "Student";
+                document.getElementById('profile-roll').innerText = data.rollNumber || "";
+                document.getElementById('profile-college').innerText = data.college || "College";
+                document.getElementById('input-name').value = data.name || "";
+                document.getElementById('input-phone').value = data.phone || "";
+                
+                // Contact Form Population
+                document.getElementById('contact-name').value = data.name || "";
+                document.getElementById('contact-roll').value = data.rollNumber || "";
+                document.getElementById('contact-email').value = data.contactEmail || ""; // Populate Email
+
+                if (data.idCardUrl) document.getElementById('profile-img').src = data.idCardUrl;
+                document.getElementById('profile-role-badge').innerText = "Student";
+            }
+        }
+
+        window.handleLogout = async () => { await signOut(auth); };
+        
+        window.submitRequest = async (btn) => {
+            const utr = document.getElementById('req-utr').value;
+            const title = document.getElementById('req-title').value;
+            const type = document.getElementById('req-type').value;
+            const pages = document.getElementById('req-pages').value;
+            const price = document.getElementById('summary-total').innerText.replace('₹', '');
+            const date = document.getElementById('req-date').value;
+            const instructions = document.getElementById('req-instructions').value;
+            
+            if(!utr) { showToast("Please enter UTR", "error"); return; }
+            
+            // If passed from button click, use it, else find it
+            const button = btn || document.querySelector('#payment-step-2 button');
+            window.setBtnLoading(button, true);
+
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), {
+                    title, type, pages, price, date, instructions, utr,
+                    status: 'pending_verification', fileUrl: uploadedFileUrl, creatorId: currentUserId, createdAt: new Date().toISOString()
+                });
+                showToast("Request Sent!"); document.getElementById('order-form').reset(); window.hidePayment(); uploadedFileUrl = ""; window.router('dashboard'); window.switchDashboardTab('requests');
+            } catch (e) { console.error(e); }
+            finally { window.setBtnLoading(button, false, "Confirm"); }
+        };
+
+        // FIXED SUBMIT CONTACT QUERY
+        window.submitContactQuery = async (form) => {
+            const btn = form.querySelector('button');
+            const name = document.getElementById('contact-name').value;
+            const roll = document.getElementById('contact-roll').value;
+            const email = document.getElementById('contact-email').value;
+            const subject = document.getElementById('contact-subject').value;
+            const msg = document.getElementById('contact-msg').value;
+            
+            if(!msg) return alert("Please write a message");
+            window.setBtnLoading(btn, true);
+            
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'admin_messages'), {
+                    name, rollNumber: roll, email, subject, message: msg,
+                    userId: currentUserId, createdAt: new Date().toISOString()
+                });
+                showToast("Message Sent to Admin!");
+                document.getElementById('contact-msg').value = "";
+            } catch(e) { console.error(e); showToast("Failed to send message", "error"); }
+            finally { window.setBtnLoading(btn, false, "Send Message"); }
+        };
+
+        function setupRealtimeListeners() { 
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'requests'), (snapshot) => { 
+                allRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); 
+                renderDashboard(); 
+            }); 
+        }
+
+        window.switchDashboardTab = (tabName) => {
+            currentDashboardTab = tabName;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+            renderDashboard();
+        };
+
+        function renderDashboard() {
+            const listContainer = document.getElementById('dashboard-list');
+            let items = [];
+            let emptyMsg = "";
+            
+            // GLOBAL STATS CALCULATION
+            const myRequests = allRequests.filter(r => r.creatorId === currentUserId);
+            const myJobs = allRequests.filter(r => r.writerId === currentUserId);
+            
+            const totalSpent = myRequests.reduce((sum, r) => sum + (parseInt(r.price)||0), 0);
+            const totalEarned = myJobs.filter(r => r.status === 'completed' || r.status === 'admin_review').reduce((sum, r) => sum + (parseInt(r.price)||0), 0);
+            
+            document.getElementById('stat-spent').innerText = '₹' + totalSpent;
+            document.getElementById('stat-earned').innerText = '₹' + totalEarned;
+
+            // LIST RENDERING
+            if (currentDashboardTab === 'requests') {
+                items = myRequests;
+                emptyMsg = "You haven't posted any requests yet.";
+                document.getElementById('stat-active').innerText = items.filter(r => r.status !== 'completed').length;
+                document.getElementById('stat-completed').innerText = items.filter(r => r.status === 'completed').length;
+            } else {
+                items = allRequests.filter(r => (r.status === 'pending_verification' || r.status === 'in_progress') && r.writerId == null && r.creatorId !== currentUserId);
+                items = [...myJobs, ...items]; // Show active/completed jobs + open jobs
+                emptyMsg = "No jobs available right now. Check back later!";
+                document.getElementById('stat-active').innerText = myJobs.filter(r => r.status === 'in_progress').length;
+                document.getElementById('stat-completed').innerText = myJobs.filter(r => r.status === 'completed').length;
+            }
+            
+            listContainer.innerHTML = '';
+            if(items.length === 0) { listContainer.innerHTML = `<div class="p-12 text-center text-gray-400"><i class="fa-regular fa-folder-open text-3xl mb-2"></i><p>${emptyMsg}</p></div>`; return; }
+            
+            items.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            items.forEach(req => {
+                let statusColor = 'bg-gray-100 text-gray-600';
+                if(req.status === 'completed') statusColor = 'text-green-600 bg-green-50';
+                else if(req.status === 'in_progress') statusColor = 'text-blue-600 bg-blue-50';
+                else if(req.status === 'pending_verification') statusColor = 'text-orange-600 bg-orange-50';
+                else if(req.status === 'admin_review') statusColor = 'text-purple-600 bg-purple-50';
+                
+                let btnText = "View Details"; let btnClass = "text-primary";
+                if (currentDashboardTab === 'jobs') {
+                    if (req.writerId === currentUserId) { btnText = "Manage Task"; btnClass = "text-blue-600 font-bold"; } 
+                    else if (req.status === 'pending_verification') { btnText = "View & Accept"; btnClass = "text-green-600 font-bold"; }
+                }
+                
+                listContainer.innerHTML += `
+                    <div class="p-6 flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-gray-50 border-b border-gray-100 last:border-0 transition gap-4">
+                        <div>
+                            <div class="flex items-center mb-2">
+                                <span class="px-2 py-1 rounded text-xs font-semibold ${statusColor} mr-3">${req.status.replace('_',' ').toUpperCase()}</span>
+                                <span class="text-xs text-gray-500"><i class="fa-regular fa-calendar mr-1"></i> Due: ${req.date}</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-900">${req.title}</h3>
+                            <p class="text-sm text-gray-500">${req.type} • ${req.pages} Pages</p>
+                        </div>
+                        <div class="text-right w-full md:w-auto flex flex-row md:flex-col justify-between items-center md:items-end">
+                            <p class="text-xl font-bold text-gray-900">₹${req.price}</p>
+                            <button onclick="window.viewDetails('${req.id}')" class="text-sm ${btnClass} hover:underline mt-1">${btnText}</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        window.router = (id) => { 
+            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active')); 
+            document.getElementById(id).classList.add('active'); 
+        };
+        
+        window.calculatePrice = () => { 
+            const type = document.getElementById('req-type').value; 
+            const pages = document.getElementById('req-pages').value; 
+            const prices = { Notes: 20, Assignment: 25, Record: 30, Workbook: 35 };
+            const base = (prices[type] || 20) * pages; 
+            document.getElementById('summary-base').innerText = '₹'+base; 
+            document.getElementById('summary-total').innerText = '₹'+base; 
+        };
+        
+        window.showPayment = () => { 
+            document.getElementById('payment-step-1').classList.add('hidden'); 
+            document.getElementById('payment-step-2').classList.remove('hidden'); 
+        };
+        
+        window.hidePayment = () => { 
+            document.getElementById('payment-step-1').classList.remove('hidden'); 
+            document.getElementById('payment-step-2').classList.add('hidden'); 
+        };
+        
+        window.viewDetails = (id) => { 
+            currentModalId = id; const req = allRequests.find(r => r.id === id);
+            document.getElementById('modal-title').innerText = req.title; 
+            document.getElementById('modal-type').innerText = req.type; 
+            document.getElementById('modal-price').innerText = '₹'+req.price; 
+            document.getElementById('modal-status').innerText = req.status.replace('_', ' ').toUpperCase(); 
+            document.getElementById('modal-date').innerText = req.date; 
+            document.getElementById('modal-desc').innerText = req.instructions || "No instructions.";
+            
+            const isWriterView = currentDashboardTab === 'jobs';
+            document.getElementById('modal-action-btn').classList.toggle('hidden', !(req.status === 'completed' && !isWriterView));
+            document.getElementById('writer-accept-btn').classList.toggle('hidden', !(isWriterView && req.status === 'pending_verification' && req.writerId == null));
+            document.getElementById('writer-complete-btn').classList.toggle('hidden', !(isWriterView && req.status === 'in_progress' && req.writerId === currentUserId));
+            
+            const attachSec = document.getElementById('modal-attachment-section'); 
+            const attachLink = document.getElementById('modal-attachment-link');
+            if(req.fileUrl) { 
+                attachSec.classList.remove('hidden'); 
+                attachLink.href = req.fileUrl; 
+            } else { 
+                attachSec.classList.add('hidden'); 
+            }
+            document.getElementById('details-modal').classList.remove('hidden');
+        };
+        
+        window.acceptTask = async (btn) => { 
+            window.setBtnLoading(btn, true);
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', currentModalId), { status: 'in_progress', writerId: currentUserId }); 
+                window.closeModal(); 
+                showToast("Job Accepted!");
+            } catch(e) {
+                console.error(e);
+                showToast("Error accepting task", "error");
+            } finally { window.setBtnLoading(btn, false, "Accept Job"); }
+        };
+        
+        window.completeTask = async (btn) => { 
+            window.setBtnLoading(btn, true);
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'requests', currentModalId), { status: 'admin_review' }); 
+                window.closeModal(); 
+                showToast("Marked Complete.");
+            } catch(e) {
+                console.error(e);
+                showToast("Error completing task", "error");
+            } finally { window.setBtnLoading(btn, false, "Mark Completed"); }
+        };
+        
+        window.closeModal = () => document.getElementById('details-modal').classList.add('hidden');
+        
+        window.uploadToCloudinary = async (e) => { 
+            const file = e.target.files[0]; if(!file) return; 
+            document.getElementById('upload-status-text').innerText = "Uploading..."; 
+            try { 
+                const storageRef = ref(storage, `assignments/${Date.now()}_${file.name}`);
+                await uploadBytes(storageRef, file);
+                uploadedFileUrl = await getDownloadURL(storageRef);
+                document.getElementById('upload-status-text').innerText = "Uploaded!"; 
+            } catch(e) {
+                document.getElementById('upload-status-text').innerText = "Upload Failed"; 
+            } 
+        };
+        
+        function showToast(msg, type) { 
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if(type === 'error') toast.style.borderLeftColor = '#EF4444';
+            toast.innerHTML = `<span class="text-sm font-medium text-gray-700">${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        window.saveProfile = async (btn) => { 
+            if (!auth.currentUser) return;
+            const phone = document.getElementById('input-phone').value;
+            window.setBtnLoading(btn, true);
+            try {
+                const userDocRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'profile', 'info');
+                await setDoc(userDocRef, { phone }, { merge: true });
+                showToast("Profile saved!");
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to save profile", "error");
+            } finally { window.setBtnLoading(btn, false, "Save Changes"); }
+        };
+    </script>
+</body>
+</html>

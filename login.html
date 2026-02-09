@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - NoteGenie</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#4F46E5', secondary: '#10B981' }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-gray-200 relative">
+        
+        <!-- LOGIN VIEW -->
+        <div id="login-view" class="p-8">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
+                    <i class="fa-solid fa-feather-pointed text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">Welcome Back</h2>
+                <p class="text-gray-500 text-sm">Login to access NoteGenie</p>
+            </div>
+
+            <form onsubmit="event.preventDefault(); window.handleLogin();">
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Roll Number</label>
+                    <input type="text" id="login-roll" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition" placeholder="e.g. 21A91A05H5" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Password</label>
+                    <input type="password" id="login-pass" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="btn-login" class="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg mb-6">Sign In</button>
+            </form>
+
+            <div class="text-center pt-6 border-t border-gray-100">
+                <p class="text-sm text-gray-500">Need an account?</p>
+                <button onclick="window.toggleView('register')" class="text-primary font-bold hover:underline mt-1">Register New Student</button>
+            </div>
+        </div>
+
+        <!-- REGISTER VIEW (Hidden) -->
+        <div id="register-view" class="p-8 hidden">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Student Registration</h2>
+                <p class="text-gray-500 text-sm">Submit details for Admin Approval</p>
+            </div>
+
+            <form id="register-form-el" onsubmit="event.preventDefault(); window.handleRegister();">
+                <!-- Personal Details -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Full Name</label>
+                        <input type="text" id="reg-name" class="w-full px-3 py-2 border rounded-lg outline-none focus:border-secondary" placeholder="Name" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Roll No</label>
+                        <input type="text" id="reg-roll" class="w-full px-3 py-2 border rounded-lg outline-none focus:border-secondary" placeholder="Roll No" required>
+                    </div>
+                </div>
+
+                <!-- College Selection (Dynamic) -->
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">College</label>
+                    <select id="reg-college" onchange="window.handleCollegeChange()" class="w-full px-3 py-2 border rounded-lg outline-none focus:border-secondary bg-white">
+                        <option value="">Loading colleges...</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Email</label>
+                    <input type="email" id="reg-email" class="w-full px-3 py-2 border rounded-lg outline-none focus:border-secondary" placeholder="student@college.edu" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Phone</label>
+                    <input type="tel" id="reg-phone" class="w-full px-3 py-2 border rounded-lg outline-none focus:border-secondary" placeholder="+91..." required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Create Password</label>
+                    <input type="password" id="reg-pass" class="w-full px-3 py-2 border rounded-lg outline-none focus:border-secondary" placeholder="••••••••" required>
+                </div>
+
+                <!-- ID Card Upload (Conditionally Hidden) -->
+                <div class="mb-6" id="id-upload-section">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Upload Student ID Card</label>
+                    <div class="relative">
+                        <input type="file" id="id-card-file" class="hidden" onchange="window.uploadIdCard(event)" accept="image/*">
+                        <label for="id-card-file" id="upload-label" class="flex items-center justify-center w-full h-12 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition text-gray-500 text-sm">
+                            <i class="fa-solid fa-cloud-arrow-up mr-2"></i> <span>Click to Upload ID</span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Required for Admin verification.</p>
+                </div>
+
+                <!-- Auto-Verify Message (Hidden by default) -->
+                <div id="iare-verify-msg" class="mb-6 hidden bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-3">
+                    <div class="text-blue-500 mt-0.5"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <div>
+                        <p class="text-sm font-bold text-blue-800">Auto-Verification Enabled</p>
+                        <p class="text-xs text-blue-600 mt-1">Your ID photo will be automatically fetched using your Roll Number.</p>
+                    </div>
+                </div>
+
+                <button type="submit" id="reg-btn" class="w-full bg-secondary text-white py-3 rounded-xl font-bold hover:bg-green-600 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    Submit Request
+                </button>
+            </form>
+
+            <div class="text-center mt-6">
+                <button onclick="window.toggleView('login')" class="text-gray-500 hover:text-gray-800 text-sm">Cancel & Back to Login</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Status Message Overlay -->
+    <div id="status-modal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl p-8 max-w-sm text-center">
+            <div id="status-icon" class="text-5xl mb-4 text-yellow-500"><i class="fa-solid fa-clock"></i></div>
+            <h3 id="status-title" class="text-xl font-bold text-gray-900 mb-2">Request Pending</h3>
+            <p id="status-msg" class="text-gray-600 mb-6">Your account is waiting for Admin approval.</p>
+            <button onclick="document.getElementById('status-modal').classList.add('hidden')" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-medium hover:bg-gray-300">Close</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBstwDEIau7YHLbgFhkLbod9OMkPw3Xgf4",
+            authDomain: "iare-2204f.firebaseapp.com",
+            projectId: "iare-2204f",
+            storageBucket: "iare-2204f.firebasestorage.app",
+            messagingSenderId: "962120096501",
+            appId: "1:962120096501:web:2eec0d190a65ca499683bc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const appId = 'iare-2204f';
+
+        let idCardUrl = "";
+        let collegesData = []; // Array of { name, pattern }
+
+        // Loading Helper
+        window.setBtnLoading = (btn, isLoading, text) => {
+            if(isLoading) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Processing...`;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = text;
+            }
+        };
+
+        // --- Init: Fetch College Config (Real-Time) ---
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), (snap) => {
+            const select = document.getElementById('reg-college');
+            
+            // Save current selection to restore after update if possible
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">Select College...</option>';
+            
+            if (snap.exists() && snap.data().colleges) {
+                collegesData = snap.data().colleges || [];
+                collegesData.forEach(c => {
+                    select.innerHTML += `<option value="${c.name}">${c.name}</option>`;
+                });
+            } else {
+                // Fallback
+                select.innerHTML += `<option value="Other">Other</option>`;
+            }
+            
+            // Restore selection if valid
+            if(currentVal && collegesData.some(c => c.name === currentVal)) {
+                select.value = currentVal;
+            }
+        });
+
+        // --- Logic: Handle College Selection ---
+        window.handleCollegeChange = () => {
+            const selectedName = document.getElementById('reg-college').value;
+            const uploadSec = document.getElementById('id-upload-section');
+            const verifyMsg = document.getElementById('iare-verify-msg');
+            const fileInput = document.getElementById('id-card-file');
+
+            // Find selected college config
+            const college = collegesData.find(c => c.name === selectedName);
+
+            // Check if it has a pattern
+            if (college && college.pattern && college.pattern.trim() !== "") {
+                uploadSec.classList.add('hidden');
+                verifyMsg.classList.remove('hidden');
+                fileInput.required = false;
+            } else {
+                uploadSec.classList.remove('hidden');
+                verifyMsg.classList.add('hidden');
+                fileInput.required = true;
+            }
+        };
+
+        // --- View Toggling ---
+        window.toggleView = (view) => {
+            document.getElementById('login-view').classList.toggle('hidden', view === 'register');
+            document.getElementById('register-view').classList.toggle('hidden', view === 'login');
+        };
+
+        // --- Firebase Storage Upload (For Non-Auto Colleges) ---
+        window.uploadIdCard = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const label = document.getElementById('upload-label');
+            label.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Uploading...`;
+            
+            try {
+                const storageRef = ref(storage, `id_cards/${Date.now()}_${file.name}`);
+                await uploadBytes(storageRef, file);
+                idCardUrl = await getDownloadURL(storageRef);
+                
+                label.classList.add('border-green-500', 'text-green-600', 'bg-green-50');
+                label.innerHTML = `<i class="fa-solid fa-check mr-2"></i> ID Uploaded`;
+            } catch (err) {
+                console.error(err);
+                label.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i> Failed. Try Again.`;
+            }
+        };
+
+        // --- Registration Logic ---
+        window.handleRegister = async () => {
+            const name = document.getElementById('reg-name').value;
+            const roll = document.getElementById('reg-roll').value;
+            const collegeName = document.getElementById('reg-college').value;
+            const email = document.getElementById('reg-email').value;
+            const phone = document.getElementById('reg-phone').value;
+            const pass = document.getElementById('reg-pass').value;
+
+            if(!collegeName) return alert("Select a college");
+
+            // Determine ID URL
+            let finalIdUrl = idCardUrl;
+            
+            const college = collegesData.find(c => c.name === collegeName);
+            if (college && college.pattern && college.pattern.trim() !== "") {
+                // Replace {rollnumber} with actual roll
+                finalIdUrl = college.pattern.replace('{rollnumber}', roll);
+            } else {
+                if (!finalIdUrl) { alert("Please upload your ID card."); return; }
+            }
+
+            const btn = document.getElementById('reg-btn');
+            window.setBtnLoading(btn, true);
+
+            try {
+                const loginEmail = `${roll.toLowerCase().trim()}@notegenie.app`;
+                const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, pass);
+                const user = userCredential.user;
+
+                // 1. Profile
+                await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), {
+                    name, rollNumber: roll, college: collegeName, contactEmail: email, phone,
+                    idCardUrl: finalIdUrl,
+                    approved: false, role: 'student', createdAt: new Date().toISOString()
+                });
+
+                // 2. Pending Request
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pending_users', user.uid), {
+                    name, rollNumber: roll, college: collegeName, idCardUrl: finalIdUrl,
+                    contactEmail: email, // Saved here for Admin to see
+                    uid: user.uid, createdAt: new Date().toISOString()
+                });
+
+                await signOut(auth);
+                showStatus('Request Sent', 'Your registration is pending Admin approval.', 'success');
+                window.toggleView('login');
+                document.getElementById('register-form-el').reset();
+            } catch (error) {
+                alert("Error: " + error.message);
+            } finally {
+                window.setBtnLoading(btn, false, "Submit Request");
+            }
+        };
+
+        // --- Login Logic ---
+        window.handleLogin = async () => {
+            const roll = document.getElementById('login-roll').value;
+            const pass = document.getElementById('login-pass').value;
+            const loginEmail = `${roll.toLowerCase().trim()}@notegenie.app`;
+            const btn = document.getElementById('btn-login');
+
+            window.setBtnLoading(btn, true);
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, loginEmail, pass);
+                const user = userCredential.user;
+                
+                const docSnap = await getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.role === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else if (data.approved === true) {
+                        window.location.href = 'index.html';
+                    } else {
+                        await signOut(auth);
+                        showStatus('Approval Pending', 'Your account has not been approved by the Admin yet.', 'warning');
+                    }
+                } else {
+                    window.location.href = 'index.html';
+                }
+            } catch (error) {
+                alert("Invalid Credentials. Please check Roll Number and Password.");
+            } finally {
+                window.setBtnLoading(btn, false, "Sign In");
+            }
+        };
+
+        function showStatus(title, msg, type) {
+            const modal = document.getElementById('status-modal');
+            const icon = document.getElementById('status-icon');
+            document.getElementById('status-title').innerText = title;
+            document.getElementById('status-msg').innerText = msg;
+            icon.innerHTML = type === 'success' ? '<i class="fa-solid fa-circle-check text-green-500"></i>' : '<i class="fa-solid fa-clock text-yellow-500"></i>';
+            modal.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

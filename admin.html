@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - NoteGenie</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#0F172A', secondary: '#3B82F6', accent: '#F59E0B', success: '#10B981' }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-link { @apply flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition cursor-pointer; }
+        .sidebar-link.active { @apply bg-secondary text-white shadow-lg; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex text-gray-800">
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading-screen" class="fixed inset-0 bg-white z-[9999] flex flex-col items-center justify-center">
+        <div class="w-12 h-12 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-gray-500 font-medium tracking-wide">Authenticating Admin...</p>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-primary text-white flex-shrink-0 hidden md:flex flex-col h-screen sticky top-0">
+        <div class="p-6 border-b border-gray-700">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-secondary rounded flex items-center justify-center"><i class="fa-solid fa-bolt text-white text-sm"></i></div>
+                <span class="font-bold text-xl tracking-tight">Admin<span class="text-secondary">OS</span></span>
+            </div>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <div onclick="window.switchTab('dashboard')" class="sidebar-link active" id="nav-dashboard">
+                <i class="fa-solid fa-chart-pie w-5"></i> <span>Dashboard</span>
+            </div>
+            <div onclick="window.switchTab('messages')" class="sidebar-link" id="nav-messages">
+                <i class="fa-solid fa-envelope w-5"></i> <span>Messages</span>
+            </div>
+            <div onclick="window.switchTab('cms')" class="sidebar-link" id="nav-cms">
+                <i class="fa-solid fa-pen-nib w-5"></i> <span>Site CMS</span>
+            </div>
+            <div onclick="window.switchTab('services')" class="sidebar-link" id="nav-services">
+                <i class="fa-solid fa-tags w-5"></i> <span>Services & Pricing</span>
+            </div>
+            <div onclick="window.switchTab('users')" class="sidebar-link" id="nav-users">
+                <i class="fa-solid fa-users w-5"></i> <span>User Manager</span>
+            </div>
+        </nav>
+        <div class="p-4 border-t border-gray-700">
+            <div class="flex items-center gap-3 mb-4 px-2">
+                <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs" id="admin-avatar">AD</div>
+                <div class="truncate w-32">
+                    <p class="text-sm font-medium truncate" id="admin-name">Loading...</p>
+                    <p class="text-xs text-gray-400">Super Admin</p>
+                </div>
+            </div>
+            <button onclick="window.logout()" class="w-full bg-red-500/10 text-red-400 border border-red-500/20 py-2 rounded text-sm hover:bg-red-500 hover:text-white transition">Sign Out</button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 overflow-y-auto h-screen p-8">
+        
+        <!-- DASHBOARD TAB -->
+        <div id="tab-dashboard" class="tab-content active">
+            <header class="flex justify-between items-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
+                <span class="text-sm text-gray-500" id="current-date">Loading...</span>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase">Pending Approvals</p>
+                            <h3 class="text-3xl font-bold text-gray-900 mt-2" id="stat-pending">0</h3>
+                        </div>
+                        <div class="p-2 bg-orange-50 text-orange-500 rounded-lg"><i class="fa-solid fa-user-clock"></i></div>
+                    </div>
+                </div>
+                
+                <!-- Announcement Widget -->
+                <div class="md:col-span-2 bg-gradient-to-r from-secondary to-indigo-600 p-6 rounded-xl text-white shadow-lg relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h3 class="font-bold text-lg mb-1">Active Announcement</h3>
+                        <p class="text-blue-100 text-sm mb-4 truncate" id="dashboard-announcement">No active announcements.</p>
+                        <button onclick="window.switchTab('cms')" class="bg-white/20 hover:bg-white/30 text-white px-4 py-1.5 rounded-lg text-sm transition">Manage Content</button>
+                    </div>
+                    <i class="fa-solid fa-bullhorn absolute -right-6 -bottom-6 text-9xl text-white/10 rotate-12"></i>
+                </div>
+            </div>
+
+            <!-- Pending Approvals List -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <h2 class="font-bold text-gray-800"><i class="fa-solid fa-list-check mr-2 text-secondary"></i>Pending Student Verifications</h2>
+                    <button onclick="window.fetchPendingUsers()" class="text-secondary hover:text-blue-700 text-sm"><i class="fa-solid fa-rotate mr-1"></i> Refresh</button>
+                </div>
+                <div id="pending-list" class="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+                    <div class="p-8 text-center text-gray-400 italic">Loading requests...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MESSAGES TAB -->
+        <div id="tab-messages" class="tab-content">
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Student Messages</h1>
+                    <p class="text-gray-500 text-sm">Queries and support requests.</p>
+                </div>
+                <button onclick="window.fetchMessages()" class="text-sm text-secondary hover:underline"><i class="fa-solid fa-rotate mr-1"></i> Refresh</button>
+            </header>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[300px]">
+                <div id="rules-help" class="hidden bg-red-50 p-4 border-b border-red-100 text-red-700 text-sm">
+                    <strong><i class="fa-solid fa-triangle-exclamation mr-2"></i>Database Permission Error</strong>
+                    <p class="mt-1">Messages are not loading because the security rule is missing. Please update Firestore Rules.</p>
+                </div>
+                <div id="messages-list" class="divide-y divide-gray-100">
+                    <div class="p-10 text-center text-gray-400">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CMS TAB -->
+        <div id="tab-cms" class="tab-content">
+            <header class="mb-8">
+                <h1 class="text-2xl font-bold text-gray-900">Content Management</h1>
+                <p class="text-gray-500 text-sm">Update website text, images, colleges, and announcements.</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- College Settings (FIXED) -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2">
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                        <i class="fa-solid fa-university mr-2 text-primary"></i>College Configuration
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Add Form -->
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 h-fit">
+                            <h4 class="text-sm font-bold text-gray-700 mb-4"><i class="fa-solid fa-plus-circle mr-1"></i> Add New College</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">College Name</label>
+                                    <input type="text" id="new-college-name" class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-secondary outline-none" placeholder="e.g. IARE">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Image Pattern (Optional)</label>
+                                    <input type="text" id="new-college-pattern" class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-secondary outline-none" placeholder="https://site.com/{rollnumber}.jpg">
+                                    <p class="text-[10px] text-gray-400 mt-1">Use <code>{rollnumber}</code> as placeholder</p>
+                                </div>
+                                <button onclick="window.addCollege()" class="w-full bg-secondary text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-600">Add to List</button>
+                            </div>
+                        </div>
+
+                        <!-- List View -->
+                        <div class="md:col-span-2">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-sm font-bold text-gray-700">Active Colleges List</h4>
+                                <span id="colleges-unsaved-badge" class="hidden text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-bold">Unsaved Changes</span>
+                            </div>
+                            <div id="college-list-display" class="space-y-2 max-h-64 overflow-y-auto p-1 bg-white border rounded">
+                                <p class="text-gray-400 text-sm italic p-2">Loading...</p>
+                            </div>
+                            <div class="mt-4 flex justify-end">
+                                <button id="btn-save-colleges" onclick="window.saveCMS('colleges', this)" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition text-sm shadow-md">
+                                    <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Push to Live Site
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Text Content -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Website Copy</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Welcome Headline</label>
+                            <input type="text" id="cms-welcome" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-secondary outline-none" placeholder="e.g. Welcome to NoteGenie">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">About Us Text</label>
+                            <textarea id="cms-about" rows="4" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-secondary outline-none" placeholder="Describe your platform..."></textarea>
+                        </div>
+                        <button id="btn-save-text" onclick="window.saveCMS('text', this)" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition text-sm">Save Text Changes</button>
+                    </div>
+                </div>
+
+                <!-- Announcement -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Announcement</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Banner Message</label>
+                            <input type="text" id="cms-announcement" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-secondary outline-none" placeholder="e.g. Server Maintenance tonight">
+                        </div>
+                        <div class="flex gap-3">
+                            <button id="btn-save-announcement" onclick="window.saveCMS('announcement', this)" class="bg-accent text-white px-6 py-2 rounded-lg text-sm">Post Announcement</button>
+                            <button onclick="window.clearAnnouncement()" class="text-gray-500 hover:text-red-500 text-sm underline">Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Image Management -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2">
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Media Assets</h3>
+                    <div class="flex items-start gap-6">
+                        <div class="w-1/3">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">About Section Image</label>
+                            <div class="relative group h-40 bg-gray-100 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 hover:border-secondary transition flex items-center justify-center cursor-pointer">
+                                <img id="preview-about-img" src="" class="absolute inset-0 w-full h-full object-cover hidden">
+                                <div class="text-center p-4">
+                                    <i class="fa-solid fa-cloud-arrow-up text-2xl text-gray-400 mb-2" id="upload-icon"></i>
+                                    <p class="text-xs text-gray-500" id="upload-text">Click to Upload</p>
+                                </div>
+                                <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" onchange="window.uploadCMSImage(event)">
+                            </div>
+                        </div>
+                        <div class="w-2/3">
+                            <p class="text-sm text-gray-600 mb-2">Current Image URL:</p>
+                            <input type="text" id="cms-img-url" readonly class="w-full bg-gray-50 border rounded px-3 py-2 text-xs text-gray-500 mb-4">
+                            <button id="btn-save-image" onclick="window.saveCMS('image', this)" class="bg-success text-white px-6 py-2 rounded-lg hover:bg-green-600 transition text-sm">Save New Image</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SERVICES TAB -->
+        <div id="tab-services" class="tab-content">
+            <header class="mb-8 flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-900">Services & Pricing</h1>
+                <button id="btn-save-services" onclick="window.saveServices(this)" class="bg-secondary text-white px-6 py-2 rounded-lg shadow-lg hover:bg-blue-600 transition">Save Changes</button>
+            </header>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 text-gray-600 text-xs uppercase font-semibold">
+                        <tr>
+                            <th class="px-6 py-4">Service Name</th>
+                            <th class="px-6 py-4">Base Price (Per Page)</th>
+                            <th class="px-6 py-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm" id="services-list">
+                        <tr id="row-Notes">
+                            <td class="px-6 py-4 font-medium"><i class="fa-solid fa-book-open text-blue-500 mr-2"></i>Class Notes</td>
+                            <td class="px-6 py-4"><input type="number" id="price-Notes" class="border rounded px-2 py-1 w-24 text-center" value="20"> <span class="text-gray-400 ml-1">₹</span></td>
+                            <td class="px-6 py-4"><input type="checkbox" id="active-Notes" checked></td>
+                        </tr>
+                        <tr id="row-Assignment">
+                            <td class="px-6 py-4 font-medium"><i class="fa-solid fa-pen-nib text-purple-500 mr-2"></i>Assignments</td>
+                            <td class="px-6 py-4"><input type="number" id="price-Assignment" class="border rounded px-2 py-1 w-24 text-center" value="25"> <span class="text-gray-400 ml-1">₹</span></td>
+                            <td class="px-6 py-4"><input type="checkbox" id="active-Assignment" checked></td>
+                        </tr>
+                        <tr id="row-Record">
+                            <td class="px-6 py-4 font-medium"><i class="fa-solid fa-flask text-emerald-500 mr-2"></i>Lab Records</td>
+                            <td class="px-6 py-4"><input type="number" id="price-Record" class="border rounded px-2 py-1 w-24 text-center" value="30"> <span class="text-gray-400 ml-1">₹</span></td>
+                            <td class="px-6 py-4"><input type="checkbox" id="active-Record" checked></td>
+                        </tr>
+                        <tr id="row-Workbook">
+                            <td class="px-6 py-4 font-medium"><i class="fa-solid fa-book text-orange-500 mr-2"></i>Workbooks</td>
+                            <td class="px-6 py-4"><input type="number" id="price-Workbook" class="border rounded px-2 py-1 w-24 text-center" value="35"> <span class="text-gray-400 ml-1">₹</span></td>
+                            <td class="px-6 py-4"><input type="checkbox" id="active-Workbook" checked></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- USERS TAB -->
+        <div id="tab-users" class="tab-content">
+            <header class="mb-8"><h1 class="text-2xl font-bold text-gray-900">User Management</h1></header>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-100 flex gap-4">
+                    <input type="text" id="user-search" onkeyup="window.filterUsers()" placeholder="Search users..." class="flex-1 px-4 py-2 border rounded-lg outline-none">
+                    <button onclick="window.fetchUsers()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+                <div id="all-users-list" class="divide-y divide-gray-100 max-h-[600px] overflow-y-auto"><div class="p-10 text-center text-gray-400">Loading...</div></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="img-modal" class="fixed inset-0 bg-black/90 hidden z-[100] flex items-center justify-center p-4" onclick="this.classList.add('hidden')"><img id="modal-img" src="" class="max-h-full max-w-full rounded shadow-2xl"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // CONFIG
+        const firebaseConfig = { apiKey: "AIzaSyBstwDEIau7YHLbgFhkLbod9OMkPw3Xgf4", authDomain: "iare-2204f.firebaseapp.com", projectId: "iare-2204f", storageBucket: "iare-2204f.firebasestorage.app", messagingSenderId: "962120096501", appId: "1:962120096501:web:2eec0d190a65ca499683bc" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const appId = 'iare-2204f';
+
+        // STATE
+        window.collegesList = [];
+        window.allUsers = [];
+
+        // Loading Helper
+        window.setBtnLoading = (btn, isLoading, text) => {
+            if(!btn) return;
+            if(isLoading) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Processing...`;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = text;
+            }
+        };
+
+        // INIT
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+                    const snap = await getDoc(profileRef);
+                    if (snap.exists() && snap.data().role === 'admin') {
+                        document.getElementById('loading-screen').classList.add('hidden');
+                        document.getElementById('admin-name').innerText = snap.data().name || "Admin";
+                        document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+                        
+                        fetchPendingUsers(); 
+                        fetchCMS();
+                        fetchUsers();
+                        fetchMessages(); 
+                    } else {
+                        alert("Access Denied");
+                        await signOut(auth);
+                        window.location.href = 'login.html';
+                    }
+                } catch(e) { console.error(e); alert("System Error: " + e.message); }
+            } else { window.location.href = 'login.html'; }
+        });
+
+        window.switchTab = (tabId) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${tabId}`).classList.add('active');
+        };
+
+        // PENDING USERS
+        window.fetchPendingUsers = async () => {
+            const list = document.getElementById('pending-list');
+            try {
+                const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'pending_users'));
+                document.getElementById('stat-pending').innerText = querySnapshot.size;
+                list.innerHTML = '';
+                if (querySnapshot.empty) { list.innerHTML = '<div class="p-8 text-center text-gray-400 text-sm">All caught up! No pending approvals.</div>'; return; }
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const html = `<div class="p-6 flex flex-col md:flex-row items-center justify-between gap-4" id="card-${data.uid}">
+                        <div class="flex items-center gap-4 w-full md:w-auto">
+                            <img src="${data.idCardUrl}" onclick="window.showImage('${data.idCardUrl}')" class="w-12 h-12 rounded object-cover cursor-zoom-in border bg-gray-200" onerror="this.src='https://placehold.co/100?text=ID'">
+                            <div><h4 class="font-bold text-gray-900">${data.name}</h4><p class="text-xs text-gray-500 font-mono">${data.rollNumber}</p><span class="text-xs bg-blue-100 text-blue-800 px-2 rounded">${data.college || 'Unknown'}</span>
+                            <p class="text-xs text-gray-400 mt-1">${data.contactEmail || ''}</p></div>
+                        </div>
+                        <div class="flex gap-2"><button onclick="window.handleUser('${data.uid}', 'reject')" class="px-3 py-1.5 border border-red-200 text-red-600 rounded text-xs font-bold hover:bg-red-50">REJECT</button><button onclick="window.handleUser('${data.uid}', 'approve')" class="px-3 py-1.5 bg-success text-white rounded text-xs font-bold hover:bg-green-600 shadow-sm">APPROVE</button></div>
+                    </div>`;
+                    list.innerHTML += html;
+                });
+            } catch (e) { console.error(e); }
+        };
+
+        window.handleUser = async (uid, action) => {
+            document.getElementById(`card-${uid}`).style.opacity = '0.5';
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'users', uid, 'profile', 'info'), { approved: action === 'approve' });
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pending_users', uid));
+                document.getElementById(`card-${uid}`).remove();
+                document.getElementById('stat-pending').innerText = Math.max(0, parseInt(document.getElementById('stat-pending').innerText) - 1);
+            } catch (e) { alert("Action failed: " + e.message); document.getElementById(`card-${uid}`).style.opacity = '1'; }
+        };
+
+        // MESSAGES
+        window.fetchMessages = async () => {
+            const list = document.getElementById('messages-list');
+            try {
+                const snapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'admin_messages'));
+                list.innerHTML = '';
+                document.getElementById('rules-help').classList.add('hidden'); 
+                
+                if(snapshot.empty) { list.innerHTML = '<div class="p-8 text-center text-gray-400">No new messages.</div>'; return; }
+                
+                snapshot.forEach(docSnap => {
+                    const msg = docSnap.data();
+                    const date = msg.createdAt ? new Date(msg.createdAt).toLocaleDateString() : 'Recent';
+                    list.innerHTML += `
+                        <div class="p-6 hover:bg-gray-50 border-b border-gray-100 last:border-0" id="msg-${docSnap.id}">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h4 class="font-bold text-gray-900">${msg.subject}</h4>
+                                    <p class="text-xs text-gray-500">
+                                        From: ${msg.name} (${msg.rollNumber}) 
+                                        <span class="mx-1 text-gray-300">|</span> 
+                                        <span class="text-blue-600 font-medium">${msg.email || 'No Email'}</span>
+                                        <span class="mx-1 text-gray-300">|</span> 
+                                        ${date}
+                                    </p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <a href="mailto:${msg.email}?subject=Re: ${msg.subject}" class="text-gray-400 hover:text-blue-500 px-2 py-1 rounded hover:bg-blue-50 transition" title="Reply via Email"><i class="fa-solid fa-reply"></i></a>
+                                    <button onclick="window.deleteMessage('${docSnap.id}')" class="text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50 transition"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100">${msg.message}</p>
+                        </div>
+                    `;
+                });
+            } catch(e) { 
+                console.error(e); 
+                document.getElementById('rules-help').classList.remove('hidden'); 
+            }
+        };
+
+        window.deleteMessage = async (id) => {
+            if(!confirm("Delete this message?")) return;
+            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'admin_messages', id)); document.getElementById(`msg-${id}`).remove(); } catch(e) { alert("Failed to delete"); }
+        };
+
+        // CMS
+        window.fetchCMS = async () => {
+            try {
+                const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if(data.pricing) { for(const [key, val] of Object.entries(data.pricing)) { if(document.getElementById(`price-${key}`)) document.getElementById(`price-${key}`).value = val; } }
+                    if(data.services_active) { for(const [key, val] of Object.entries(data.services_active)) { if(document.getElementById(`active-${key}`)) document.getElementById(`active-${key}`).checked = val; } }
+                    if(data.text) { document.getElementById('cms-welcome').value = data.text.welcome || ""; document.getElementById('cms-about').value = data.text.about || ""; }
+                    if(data.announcement) { document.getElementById('cms-announcement').value = data.announcement.text || ""; }
+                    if(data.colleges) { 
+                        window.collegesList = data.colleges || []; 
+                        window.renderColleges(); 
+                    }
+                    if(data.images && data.images.about) {
+                        document.getElementById('preview-about-img').src = data.images.about;
+                        document.getElementById('preview-about-img').classList.remove('hidden');
+                        document.getElementById('cms-img-url').value = data.images.about;
+                    }
+                } else {
+                    window.collegesList = []; // Initialize empty if doc missing
+                    window.renderColleges();
+                }
+            } catch(e) { 
+                console.log("CMS Init Error", e); 
+                window.collegesList = [];
+                window.renderColleges();
+            }
+        };
+
+        window.renderColleges = () => {
+            const container = document.getElementById('college-list-display');
+            container.innerHTML = '';
+            
+            if (!window.collegesList || window.collegesList.length === 0) { 
+                container.innerHTML = '<p class="text-sm text-gray-400 italic">No colleges configured yet. Add one below.</p>'; 
+                return; 
+            }
+            
+            window.collegesList.forEach((c, index) => {
+                container.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
+                        <div class="overflow-hidden">
+                            <p class="font-bold text-sm text-gray-800">${c.name}</p>
+                            <p class="text-xs text-gray-500 truncate w-full">${c.pattern || 'Manual Upload'}</p>
+                        </div>
+                        <button onclick="window.removeCollege(${index})" class="text-red-400 hover:text-red-600 ml-4"><i class="fa-solid fa-trash"></i></button>
+                    </div>`;
+            });
+        };
+
+        window.addCollege = () => {
+            const name = document.getElementById('new-college-name').value;
+            const pattern = document.getElementById('new-college-pattern').value;
+            if(!name) return alert("College Name is required");
+            
+            // Add visual feedback
+            document.getElementById('colleges-unsaved-badge')?.classList.remove('hidden');
+            
+            window.collegesList.push({ name, pattern });
+            window.renderColleges();
+            
+            // Clear inputs
+            document.getElementById('new-college-name').value = '';
+            document.getElementById('new-college-pattern').value = '';
+        };
+
+        window.removeCollege = (index) => { 
+            document.getElementById('colleges-unsaved-badge')?.classList.remove('hidden');
+            window.collegesList.splice(index, 1); 
+            window.renderColleges(); 
+        };
+
+        window.saveCMS = async (type, btn) => {
+            window.setBtnLoading(btn, true);
+            const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config');
+            let updateData = {};
+            let originalText = "Save";
+
+            if(type === 'text') {
+                updateData = { "text.welcome": document.getElementById('cms-welcome').value, "text.about": document.getElementById('cms-about').value };
+                originalText = "Save Text Changes";
+            } else if (type === 'announcement') {
+                const text = document.getElementById('cms-announcement').value;
+                updateData = { "announcement.text": text, "announcement.active": !!text };
+                originalText = "Post Announcement";
+            } else if (type === 'image') {
+                const url = document.getElementById('cms-img-url').value;
+                if(!url) { window.setBtnLoading(btn, false, "Save New Image"); return alert("Upload an image first!"); }
+                updateData = { "images.about": url };
+                originalText = "Save New Image";
+            } else if (type === 'colleges') {
+                // Ensure we are saving a clean array
+                const cleanList = window.collegesList.map(c => ({ name: c.name, pattern: c.pattern || "" }));
+                updateData = { "colleges": cleanList };
+                originalText = "Save College Configuration";
+            }
+
+            try {
+                await setDoc(configRef, updateData, { merge: true });
+                alert("Content Updated Successfully!");
+            } catch(e) { 
+                console.error("CMS Save Error", e);
+                alert("Save failed: " + e.message); 
+            }
+            finally { window.setBtnLoading(btn, false, originalText); }
+        };
+
+        window.clearAnnouncement = async () => { document.getElementById('cms-announcement').value = ""; window.saveCMS('announcement', document.getElementById('btn-save-announcement')); };
+
+        window.saveServices = async (btn) => {
+            window.setBtnLoading(btn, true);
+            const types = ['Notes', 'Assignment', 'Record', 'Workbook'];
+            let pricing = {}; let status = {};
+            types.forEach(t => {
+                pricing[t] = parseInt(document.getElementById(`price-${t}`).value) || 0;
+                status[t] = document.getElementById(`active-${t}`).checked;
+            });
+            try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { pricing, services_active: status }, { merge: true }); alert("Updated!"); } catch(e) { alert("Error"); }
+            finally { window.setBtnLoading(btn, false, "Save Changes"); }
+        };
+
+        // --- FIREBASE STORAGE UPLOAD (For CMS) ---
+        window.uploadCMSImage = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const container = event.target.parentElement;
+            const icon = document.getElementById('upload-icon');
+            const text = document.getElementById('upload-text');
+            
+            container.style.opacity = '0.5';
+            text.innerText = "Uploading...";
+            icon.className = "fa-solid fa-spinner fa-spin text-2xl text-primary mb-2";
+
+            try {
+                const storageRef = ref(storage, `site_assets/${Date.now()}_${file.name}`);
+                await uploadBytes(storageRef, file);
+                const url = await getDownloadURL(storageRef);
+                
+                document.getElementById('cms-img-url').value = url;
+                document.getElementById('preview-about-img').src = url;
+                document.getElementById('preview-about-img').classList.remove('hidden');
+                
+                text.innerText = "Uploaded!";
+                icon.className = "fa-solid fa-check text-2xl text-green-500 mb-2";
+                container.style.opacity = '1';
+            } catch(e) {
+                console.error(e);
+                alert("Upload failed: " + e.message);
+                container.style.opacity = '1';
+                text.innerText = "Failed";
+                icon.className = "fa-solid fa-triangle-exclamation text-2xl text-red-500 mb-2";
+            }
+        };
+
+        window.fetchUsers = async () => {
+            const list = document.getElementById('all-users-list');
+            try {
+                const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'pending_users'));
+                window.allUsers = [];
+                querySnapshot.forEach((doc) => { window.allUsers.push(doc.data()); });
+                window.renderUsers(window.allUsers);
+            } catch(e) { list.innerHTML = '<div class="p-8 text-center text-gray-400 text-sm">Error fetching users</div>'; }
+        };
+
+        window.renderUsers = (users) => {
+            const list = document.getElementById('all-users-list');
+            list.innerHTML = '';
+            if(users.length === 0) { list.innerHTML = '<div class="p-8 text-center text-gray-400">No users found.</div>'; return; }
+            users.forEach(u => {
+                list.innerHTML += `<div class="p-4 flex justify-between items-center hover:bg-gray-50 border-b border-gray-50 last:border-0"><div><p class="font-bold text-gray-900">${u.name}</p><p class="text-xs text-gray-500">${u.rollNumber} • ${u.college || '-'}</p></div><span class="text-xs bg-gray-100 px-2 py-1 rounded">Student</span></div>`;
+            });
+        };
+
+        window.filterUsers = () => {
+            const query = document.getElementById('user-search').value.toLowerCase();
+            const filtered = window.allUsers.filter(u => (u.name && u.name.toLowerCase().includes(query)) || (u.rollNumber && u.rollNumber.toLowerCase().includes(query)));
+            window.renderUsers(filtered);
+        };
+
+        window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
+        window.showImage = (url) => { document.getElementById('modal-img').src = url; document.getElementById('img-modal').classList.remove('hidden'); };
+    </script>
+</body>
+</html>
